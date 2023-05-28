@@ -15,6 +15,9 @@ app.get('/reviews', async(req, res) => {
   } else if (req.query.sort === 'newest') {
     sort = 'date'
   } else if (req.query.sort === 'relevant') {
+    // const msInAMonth = 2.628 * 10**9;
+    // const ageFactor = 50;  // i.e., a 1-month-old review has weight of 50 (+ its helpfulness)
+
     // reviews.toSorted((a, b) => {
     //const bMonthsAgo =(Date.now() - Date.parse(b.date)) / msInAMonth;
     //const aMonthsAgo =(Date.now() - Date.parse(a.date)) / msInAMonth;
@@ -67,31 +70,83 @@ app.get('/reviews', async(req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 });
-app.post('/reviews', async(req, res) => {
+
+
+app.post ('/reviews', async(req, res) => {
   console.log(req.body)
+  res.status(201).json('working on it')
+})
+
+
+app.get ('/reviews/meta', async(req, res) => {
+  const result = {
+    product_id: req.query.product_id,
+    ratings: {
+      "1": 0,
+      "2": 0,
+      "3": 0,
+      "4": 0,
+      "5": 0
+    },
+    recommended: {
+      'true':0,
+      'false':0
+    },
+    characteristics: {}
+  }
   try {
-    // insert into database here
-  } catch (error) {
+    const client = await pool.connect()
+    const ratingsAndRecommend = await client.query(`SELECT rating, recommend 
+    FROM reviews 
+    WHERE product_id = ${req.query.product_id};
+    `);
+    result.recommended.database = ratingsAndRecommend.rows
+    //iterate through ratingsAndRecommend and tally up the results and store them into results.ratings & results.recommended   characteristic_id, value
+    const characteristic_reviews = await client.query(`SELECT characteristics.id, characteristics.name, characteristic_reviews.value
+    FROM characteristics
+    JOIN characteristic_reviews ON characteristics.id = characteristic_reviews.characteristic_id
+    WHERE characteristics.product_id = ${req.query.product_id}; 
+    `);
+    result.characteristics = characteristic_reviews.rows
+    res.json(result)
+  } catch (error){
     console.log(error)
     res.status(500).json({err: 'Internal server error'})
   }
 })
-// POST /reviews
-// GET /reviews/meta
-// PUT /reviews/:review_id/helpful
-// PUT /reviews/:review_id/report
+
+app.put('/reviews/:review_id/helpful', async(req, res) => {
+  try {
+    const client = await pool.connect()
+    const dog = await client.query(`UPDATE helpfulness +1
+    FROM reviews
+    WHERE product_id = ${req.url.params.review_id};
+    `);
+    res.status(204)
+  } catch (error){
+    console.log(error)
+    res.status(500).json({err: 'Internal server error'})
+  }
+})
+
+app.put('/reviews/:review_id/report', async(req, res) => {
+  try {
+    const client = await pool.connect()
+    const dog = await client.query(`UPDATE reported to true
+    FROM reviews
+    WHERE product_id = ${req.url.params.review_id};
+    `);
+    res.status(204)
+  } catch (error){
+    console.log(error)
+    res.status(500).json({err: 'Internal server error'})
+  }
+})
+
 const port = 3000;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
-
-// const msInAMonth = 2.628 * 10**9;
-//   const ageFactor = 50;  // i.e., a 1-month-old review has weight of 50 (+ its helpfulness)
-
-//   switch (criteria) {
-//       case 'relevant':
-//           return 
-//           });
 
 
 
