@@ -1,38 +1,94 @@
-const pgp = require('pg-promise')();
-const connectionString = 'postgres://username:password@localhost:5432/mydatabase';
-const db = pgp(connectionString);
+// const path = require('path');
+// const fs = require('fs');
+const { Pool } = require('pg')
 
-await db.none('CREATE SCHEMA IF NOT EXISTS prodReview');
+const pool = new Pool({
+  host:process.env.host,
+  user:process.env.user,
+  password:process.env.password
+})
 
-await db.none(`
-  CREATE TABLE IF NOT EXISTS prodReview.products (
-    product_id SERIAL PRIMARY KEY,
-  )
-`)
-await db.none(`
-CREATE TABLE IF NOT EXISTS prodReview.photos (
-  photo_id SERIAL PRIMARY KEY,
-  review_id INT,
-  thumbnail_url TEXT,
-  url TEXT
-  FOREIGN KEY (review_id) REFERENCES reviews (review_id)
-  )
-`)
-await db.none(`
-  CREATE TABLE IF NOT EXISTS prodReview.reviews (
-    review_id SERIAL PRIMARY KEY,
-    product_id INT,
-    rating INT CHECK (rating >= 1 AND rating <= 5),
-    summary TEXT,
-    recommend BOOLEAN,
-    response TEXT,
-    body TEXT,
-    date DATE,
-    reviewer_name TEXT,
-    helpfulness INT,
-    photos_id INT,
-    FOREIGN KEY (product_id) REFERENCES product (product_id),
-    FOREIGN KEY (photos_id) REFERENCES photos (photos_id)
-  )
-`)
-module.exports = db;
+const initalizeDB = async() => {
+  client = await pool.connect()
+  await client.query('CREATE SCHEMA IF NOT EXISTS prodReview;');
+  
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS reviews (
+      id SERIAL PRIMARY KEY ,
+      product_id INT,
+      rating INT,
+      date TEXT,
+      summary TEXT,
+      body TEXT,
+      recommend BOOLEAN,
+      reported BOOLEAN,
+      reviewer_name TEXT,
+      reviewer_email TEXT,
+      response TEXT,
+      helpfulness INT
+    );
+  `)  
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS characteristics (
+      id SERIAL PRIMARY KEY ,
+      product_id INT,
+      name TEXT
+    );
+  `)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS characteristic_reviews (
+      id SERIAL PRIMARY KEY ,
+      characteristic_id INT,
+      review_id INT,
+      value INT,
+      FOREIGN KEY (characteristic_id) REFERENCES characteristics (id),
+      FOREIGN KEY (review_id) REFERENCES reviews (id)
+    );
+  `)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS reviews_photos (
+      id SERIAL PRIMARY KEY ,
+      review_id INT,
+      url TEXT,
+      FOREIGN KEY (review_id) REFERENCES reviews (id)
+    );
+  `)
+} 
+// initalizeDB();
+  
+// const insertToTable = async(filePath, tablename) => {
+//   const query = `COPY ${tablename} FROM '${filePath}' DELIMITER ',' CSV HEADER;`;
+//   await client.query(query)
+//   console.log(`Data from "${filePath}" inserted into ${tablename} successfully!`);
+// }
+
+// const seedDB = async() => {
+//   await insertToTable(path.join(__dirname, 'SDC-DATA/reviews.csv'), "reviews");
+//   await insertToTable(path.join(__dirname, 'SDC-DATA/characteristics.csv'), "characteristics");
+//   await insertToTable(path.join(__dirname, 'SDC-DATA/reviews_photos.csv'), "reviews_photos");
+//   await insertToTable(path.join(__dirname, 'SDC-DATA/characteristic_reviews.csv'), "characteristic_reviews");
+
+
+// COPY reviews FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/reviews.csv' DELIMITER ',' CSV HEADER;
+
+// COPY characteristics FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/characteristics.csv' DELIMITER ',' CSV HEADER;
+
+// COPY reviews_photos FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/reviews_photos.csv' DELIMITER ',' CSV HEADER;
+
+// COPY characteristic_reviews FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/characteristic_reviews.csv' DELIMITER ',' CSV HEADER;
+// }
+
+
+// const absoPath = path.join(__dirname, 'SDC-DATA')
+// fs.promises.readdir(absoPath)
+// .then((files) => {
+//   console.log('FILES => ', files)
+//   for (const file of files) {
+//     insertToTable(path.join(absoPath, file), file.split(".csv")[0])
+//     }
+// })
+// .catch((err) => {
+//   console.log('ERROR => ', err)
+// })
+
+module.exports = pool;
