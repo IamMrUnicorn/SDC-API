@@ -7,64 +7,72 @@ const app = express()
 
 app.use(express.json());
 
-app.get('/reviews', async(req, res) => {
-  console.log('incoming request => ', req.query)
-  let sort;
-  if (req.query.sort === 'helpful') {
-    sort = 'helpfulness'
-  } else if (req.query.sort === 'newest') {
-    sort = 'date'
-  } else if (req.query.sort === 'relevant') {
-    // const msInAMonth = 2.628 * 10**9;
-    // const ageFactor = 50;  // i.e., a 1-month-old review has weight of 50 (+ its helpfulness)
 
-    // reviews.toSorted((a, b) => {
-    //const bMonthsAgo =(Date.now() - Date.parse(b.date)) / msInAMonth;
-    //const aMonthsAgo =(Date.now() - Date.parse(a.date)) / msInAMonth;
-    //const bRelevance = b.helpfulness + (1 / bMonthsAgo) * ageFactor;
-    //const aRelevance = a.helpfulness + (1 / aMonthsAgo) * ageFactor;
-    //return bRelevance - aRelevance;  // sort descending by calculated relevance score
-    sort = 'helpfulness'
-  } else { 
-    sort='helpfulness'
-  }
-  
+app.get('/reviews', async (req, res) => {
+  const sort = req.query.sort === 'newest' ? 'date' : 'helpfulness';
+  const count = parseInt(req.query.count) || 5;
+  const page = parseInt(req.query.page) || 0;
+  const product_id = req.query.product_id;
+
   try {
-    const client = await pool.connect()
-    const dbResponse = await client.query(`SELECT * 
-    FROM reviews 
-    LEFT JOIN characteristic_reviews ON reviews.id = characteristic_reviews.review_id
-    WHERE product_id = ${req.query.product_id}
-    ORDER BY ${sort} DESC
-    LIMIT ${req.query.count ? req.query.count : 5} 
-    OFFSET ${req.query.page ? req.query.page : 0};
-    `);
-    const photos = await client.query(`SELECT * 
-    FROM reviews_photos
-    WHERE review_id = ${dbResponse.rows.review_id};
-    `);
-    const cleanData = dbResponse.rows.map(
-      (review) => (
-      {
-        review_id: review.id,
-        rating: review.rating,
-        summary: review.summary,
-        recommend: review.recommend,
-        response: review.response,
-        body: review.body,
-        date: review.date,
-        reviewer_name: review.reviewer_name,
-        helpfulness:review.helpfulness,
-        photos: photos.rows
+    const client = await pool.connect();
+    const dbResponse = await client.query(
+      `SELECT
+        reviews.id,
+        reviews.rating,
+        reviews.summary,
+        reviews.recommend,
+        reviews.response,
+        reviews.body,
+        reviews.date,
+        reviews.reviewer_name,
+        reviews.helpfulness
+      FROM reviews
+      WHERE reviews.product_id = $1
+      AND reviews.reported = false
+      ORDER BY ${sort} DESC
+      LIMIT $2
+      OFFSET $3`,
+      [product_id, count, page]
+    );
+
+    const reviewIDs = dbResponse.rows.map((review) => review.id);
+    
+    const photosResponse = await client.query(
+      `SELECT review_id, url, id
+      FROM reviews_photos
+      WHERE review_id = ANY ($1);`,
+      [reviewIDs]
+    );
+    const photosByReviewId = {};
+
+    photosResponse.rows.forEach((photo) => {
+      if (!photosByReviewId[photo.review_id]) {
+        photosByReviewId[photo.review_id] = [];
       }
-    ))
-    res.json({
-      product: `${req.query.product_id}`, 
-      page: 0,
-      count: 5,
-      results : cleanData,
-      original : dbResponse.rows
+      photosByReviewId[photo.review_id].push({id: photo.id, url:photo.url});
     });
+
+    const cleanData = dbResponse.rows.map((review) => ({
+      id: review.id,
+      rating: review.rating,
+      summary: review.summary,
+      recommend: review.recommend,
+      response: review.response,
+      body: review.body,
+      date: (new Date(parseInt(review.date))).toISOString(),
+      reviewer_name: review.reviewer_name,
+      helpfulness: review.helpfulness,
+      photos: photosByReviewId[review.id] || [],
+    }));
+
+    res.json({
+      product: product_id,
+      page: page,
+      count: count,
+      results: cleanData,
+    });
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal server error' });
@@ -72,84 +80,170 @@ app.get('/reviews', async(req, res) => {
 });
 
 
-app.post ('/reviews', async(req, res) => {
-  console.log(req.body)
-  res.status(201).json('working on it')
-})
-
-
-app.get ('/reviews/meta', async(req, res) => {
+app.get('/reviews/meta', async (req, res) => {
   const result = {
     product_id: req.query.product_id,
-    ratings: {
-      "1": 0,
-      "2": 0,
-      "3": 0,
-      "4": 0,
-      "5": 0
-    },
-    recommended: {
-      'true':0,
-      'false':0
-    },
+    ratings: {},
+    recommended: {},
     characteristics: {}
-  }
-  try {
-    const client = await pool.connect()
-    const ratingsAndRecommend = await client.query(`SELECT rating, recommend 
-    FROM reviews 
-    WHERE product_id = ${req.query.product_id};
-    `);
-    result.recommended.database = ratingsAndRecommend.rows
-    //iterate through ratingsAndRecommend and tally up the results and store them into results.ratings & results.recommended   characteristic_id, value
-    const characteristic_reviews = await client.query(`SELECT characteristics.id, characteristics.name, characteristic_reviews.value
-    FROM characteristics
-    JOIN characteristic_reviews ON characteristics.id = characteristic_reviews.characteristic_id
-    WHERE characteristics.product_id = ${req.query.product_id}; 
-    `);
-    result.characteristics = characteristic_reviews.rows
-    res.json(result)
-  } catch (error){
-    console.log(error)
-    res.status(500).json({err: 'Internal server error'})
-  }
-})
+  };
 
-app.put('/reviews/:review_id/helpful', async(req, res) => {
   try {
-    const client = await pool.connect()
-    const dog = await client.query(`UPDATE helpfulness +1
-    FROM reviews
-    WHERE product_id = ${req.url.params.review_id};
-    `);
-    res.status(204)
-  } catch (error){
-    console.log(error)
-    res.status(500).json({err: 'Internal server error'})
-  }
-})
+    const client = await pool.connect();
 
-app.put('/reviews/:review_id/report', async(req, res) => {
-  try {
-    const client = await pool.connect()
-    const dog = await client.query(`UPDATE reported to true
-    FROM reviews
-    WHERE product_id = ${req.url.params.review_id};
-    `);
-    res.status(204)
-  } catch (error){
-    console.log(error)
-    res.status(500).json({err: 'Internal server error'})
+    // Retrieve ratings count
+    const ratingsQuery = `
+      SELECT rating, COUNT(*) as count
+      FROM reviews
+      WHERE product_id = ${req.query.product_id}
+      AND reviews.reported = false
+      GROUP BY rating;
+    `;
+    const ratingsResult = await client.query(ratingsQuery);
+
+    // Populate ratings count in the result
+    ratingsResult.rows.forEach(row => {
+      result.ratings[row.rating.toString()] = row.count;
+    });
+
+    // Retrieve recommended count
+    const recommendedQuery = `
+      SELECT recommend, COUNT(*) as count
+      FROM reviews
+      WHERE product_id = ${req.query.product_id}
+      AND reviews.reported = false
+      GROUP BY recommend;
+    `;
+    const recommendedResult = await client.query(recommendedQuery);
+
+    // Populate recommended count in the result
+    recommendedResult.rows.forEach(row => {
+      result.recommended[row.recommend.toString()] = row.count;
+    });
+
+    // Retrieve characteristics
+    const characteristicsQuery = `
+      SELECT c.id, c.name, AVG(cr.value) as value
+      FROM characteristics c
+      JOIN characteristic_reviews cr ON c.id = cr.characteristic_id
+      WHERE c.product_id = ${req.query.product_id}
+      GROUP BY c.id, c.name;
+    `;
+    const characteristicsResult = await client.query(characteristicsQuery);
+
+  characteristicsResult.rows.forEach(row => {
+      result.characteristics[row.name] = {
+        id: row.id,
+        value: row.value.toString()
+      };
+    });
+
+    res.json(result);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ err: 'Internal server error' });
   }
-})
+});
+
+app.post('/reviews', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const rightNow = new Date
+    const rightNowInMs = rightNow.valueOf()
+    // Insert the review into the "reviews" table
+    const reviewQuery = `
+      INSERT INTO reviews (product_id, rating, summary, body, recommend, reported, reviewer_name, reviewer_email, helpfulness, date)
+      VALUES ($1, $2, $3, $4, $5, false, $6, $7, 0, $8)
+      RETURNING id;
+    `;
+    const reviewValues = [
+      req.body.product_id,
+      req.body.rating,
+      req.body.summary,
+      req.body.body,
+      req.body.recommend,
+      req.body.name,
+      req.body.email,
+      rightNowInMs
+    ];
+    const reviewResult = await client.query(reviewQuery, reviewValues);
+
+    const reviewId = reviewResult.rows[0].id; // Get the ID of the inserted review
+    // Insert the characteristics reviews
+    const characteristicsObj = req.body.characteristics;
+
+    if (characteristicsObj) {
+      const characteristicsQuery = `
+        INSERT INTO characteristic_reviews (characteristic_id, value, review_id)
+        VALUES ($1, $2, $3);
+      `;
+
+      const characteristicsValues = Object.entries(characteristicsObj).map(([characteristicId, value]) => [
+        characteristicId,
+        value,
+        reviewId
+      ]);
+
+      await Promise.all(
+        characteristicsValues.map(values => client.query(characteristicsQuery, values))
+      );
+    }
+
+
+    // Insert the review photos
+    if (req.body.photos) {
+      const photosQuery = `
+        INSERT INTO reviews_photos (review_id, url)
+        VALUES ($1, $2);
+      `;
+      const photosValues = req.body.photos.map(photo => [reviewId, photo]);
+
+      await Promise.all(
+        photosValues.map(values => client.query(photosQuery, values))
+      );
+    }
+
+    res.status(201).json('CREATED');
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ err: 'Internal server error' });
+  }
+});
+
+app.put('/reviews/:review_id/helpful', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const reviewId = req.params.review_id;
+    await client.query(`
+      UPDATE reviews
+      SET helpfulness = helpfulness + 1
+      WHERE id = ${reviewId};
+    `);
+    res.sendStatus(204);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+app.put('/reviews/:review_id/report', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const reviewId = req.params.review_id;
+    await client.query(`
+      UPDATE reviews
+      SET reported = true
+      WHERE id = ${reviewId};
+    `);
+    res.sendStatus(204);
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 
 const port = 3000;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
-
-
-
-// Helpful - This sort order will prioritize reviews that have been found helpful. The order can be found by subtracting “No” responses from “Yes” responses and sorting such that the highest score appears at the top.
-// Newest - This is a straightforward sort based on the date the review was submitted. The most recent reviews should appear first.
-// Relevant - Relevance will be determined by a combination of both the date that the review was submitted as well as ‘helpfulness’ feedback received. This combination should weigh the two characteristics such that recent reviews appear near the top, but do not outweigh reviews that have been found helpful. Similarly, reviews that have been helpful should appear near the top, but should yield to more recent reviews if they are older.

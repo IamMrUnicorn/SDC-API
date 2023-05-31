@@ -53,7 +53,14 @@ const initalizeDB = async() => {
       FOREIGN KEY (review_id) REFERENCES reviews (id)
     );
   `)
-} 
+  await client.query(`CREATE INDEX idx_reviews_product_id ON reviews (product_id);`)
+  await client.query(`CREATE INDEX idx_reviews_rating ON reviews (rating);`)
+  await client.query(`CREATE INDEX idx_reviews_recommend ON reviews (recommend);`)
+  await client.query(`CREATE INDEX idx_reviews_reported ON reviews (reported);`)
+  await client.query(`CREATE INDEX idx_reviews_photos_review_id ON reviews_photos (review_id);`)
+  await client.query(`CREATE INDEX idx_characteristic_reviews_characteristic_id ON characteristic_reviews (characteristic_id);`)
+  await client.query(`CREATE INDEX idx_characteristics_product_id ON characteristics (product_id);`)
+}
 // initalizeDB();
   
 // const insertToTable = async(filePath, tablename) => {
