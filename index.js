@@ -1,11 +1,16 @@
 const express = require("express");
-const dotenv = require('dotenv')
+const dotenv = require('dotenv');
+const cors = require('cors');
 dotenv.config()
-const pool = require('./database-postgres')
+const {pool, initalizeDB, seedDB} = require('./database-postgres')
 
 const app = express()
 
-app.use(express.json());
+// initalizeDB()
+// seedDB()
+app.use(express.json());;
+
+app.use(cors({origin:'http://localhost:3000'}))
 
 
 app.get('/reviews', async (req, res) => {
@@ -243,7 +248,7 @@ app.put('/reviews/:review_id/report', async (req, res) => {
 });
 
 
-const port = 3009;
+const port = 3000;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });

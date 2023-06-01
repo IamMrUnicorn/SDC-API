@@ -1,5 +1,3 @@
-// const path = require('path');
-// const fs = require('fs');
 const { Pool } = require('pg')
 
 const pool = new Pool({
@@ -61,41 +59,15 @@ const initalizeDB = async() => {
   await client.query(`CREATE INDEX idx_characteristic_reviews_characteristic_id ON characteristic_reviews (characteristic_id);`)
   await client.query(`CREATE INDEX idx_characteristics_product_id ON characteristics (product_id);`)
 }
-// initalizeDB();
-  
-// const insertToTable = async(filePath, tablename) => {
-//   const query = `COPY ${tablename} FROM '${filePath}' DELIMITER ',' CSV HEADER;`;
-//   await client.query(query)
-//   console.log(`Data from "${filePath}" inserted into ${tablename} successfully!`);
-// }
 
-// const seedDB = async() => {
-//   await insertToTable(path.join(__dirname, 'SDC-DATA/reviews.csv'), "reviews");
-//   await insertToTable(path.join(__dirname, 'SDC-DATA/characteristics.csv'), "characteristics");
-//   await insertToTable(path.join(__dirname, 'SDC-DATA/reviews_photos.csv'), "reviews_photos");
-//   await insertToTable(path.join(__dirname, 'SDC-DATA/characteristic_reviews.csv'), "characteristic_reviews");
+const seedDB = async() => {
+  await client.query(`COPY reviews FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/reviews.csv' DELIMITER ',' CSV HEADER;`)
+  await client.query(`COPY characteristics FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/characteristics.csv' DELIMITER ',' CSV HEADER;`)
+  await client.query(`COPY reviews_photos FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/reviews_photos.csv' DELIMITER ',' CSV HEADER;`)
+  await client.query(`COPY characteristic_reviews FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/characteristic_reviews.csv' DELIMITER ',' CSV HEADER;`)
+}
 
 
-// COPY reviews FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/reviews.csv' DELIMITER ',' CSV HEADER;
-
-// COPY characteristics FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/characteristics.csv' DELIMITER ',' CSV HEADER;
-
-// COPY reviews_photos FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/reviews_photos.csv' DELIMITER ',' CSV HEADER;
-
-// COPY characteristic_reviews FROM '/home/jason/Hackreactor/SDC-API-Reviews/SDC-DATA/characteristic_reviews.csv' DELIMITER ',' CSV HEADER;
-// }
-
-
-// const absoPath = path.join(__dirname, 'SDC-DATA')
-// fs.promises.readdir(absoPath)
-// .then((files) => {
-//   console.log('FILES => ', files)
-//   for (const file of files) {
-//     insertToTable(path.join(absoPath, file), file.split(".csv")[0])
-//     }
-// })
-// .catch((err) => {
-//   console.log('ERROR => ', err)
-// })
-
+module.exports = initalizeDB;
+module.exports = seedDB;
 module.exports = pool;
