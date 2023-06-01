@@ -8,13 +8,13 @@ services:
       - .env.docker
     restart: unless-stopped
 
-  server:
-    build:
-      context: .
-      dockerfile: ./server/src/Dockerfile
-    ports:
-      - 3000:3000
-    env_file:
-      - .env.docker
-    depends_on:
-      - db
+  # server:
+  #   build:
+  #     context: .
+  #     dockerfile: ./server/src/Dockerfile
+  #   ports:
+  #     - 3000:3000
+  #   env_file:
+  #     - .env.docker
+  #   depends_on:
+  #     - db
