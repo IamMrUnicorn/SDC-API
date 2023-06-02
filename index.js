@@ -3,6 +3,7 @@ const dotenv = require('dotenv');
 const cors = require('cors');
 dotenv.config()
 const {pool} = require('./database-postgres')
+const client = await pool.connect();
 
 const app = express()
 
@@ -18,7 +19,6 @@ app.get('/reviews', async (req, res) => {
   const product_id = req.query.product_id;
 
   try {
-    const client = await pool.connect();
     const dbResponse = await client.query(
       `SELECT
         reviews.id,
@@ -92,7 +92,6 @@ app.get('/reviews/meta', async (req, res) => {
   };
 
   try {
-    const client = await pool.connect();
 
     // Retrieve ratings count
     const ratingsQuery = `
@@ -150,7 +149,6 @@ app.get('/reviews/meta', async (req, res) => {
 
 app.post('/reviews', async (req, res) => {
   try {
-    const client = await pool.connect();
     const rightNow = new Date
     const rightNowInMs = rightNow.valueOf()
     // Insert the review into the "reviews" table
@@ -215,7 +213,6 @@ app.post('/reviews', async (req, res) => {
 
 app.put('/reviews/:review_id/helpful', async (req, res) => {
   try {
-    const client = await pool.connect();
     const reviewId = req.params.review_id;
     await client.query(`
       UPDATE reviews
@@ -231,7 +228,6 @@ app.put('/reviews/:review_id/helpful', async (req, res) => {
 
 app.put('/reviews/:review_id/report', async (req, res) => {
   try {
-    const client = await pool.connect();
     const reviewId = req.params.review_id;
     await client.query(`
       UPDATE reviews
