@@ -8,7 +8,7 @@ const app = express()
 
 app.use(express.json());;
 
-app.use(cors({origin:'http://localhost:3000'}))
+app.use(cors({origin:'*'}))
 
 
 app.get('/reviews', async (req, res) => {
@@ -250,3 +250,4 @@ const port = 3000;
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+

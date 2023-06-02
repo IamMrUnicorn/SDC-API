@@ -11,20 +11,20 @@ const pool = new Pool({
 //   await client.query('CREATE SCHEMA IF NOT EXISTS prodReview;');
   
 //   await client.query(`
-//     CREATE TABLE IF NOT EXISTS "prodReview.reviews" (
-//       id SERIAL PRIMARY KEY ,
-//       product_id INT,
-//       rating INT,
-//       date TEXT,
-//       summary TEXT,
-//       body TEXT,
-//       recommend BOOLEAN,
-//       reported BOOLEAN,
-//       reviewer_name TEXT,
-//       reviewer_email TEXT,
-//       response TEXT,
-//       helpfulness INT
-//     );
+    // CREATE TABLE IF NOT EXISTS "prodReview.reviews" (
+    //   id SERIAL PRIMARY KEY ,
+    //   product_id INT,
+    //   rating INT,
+    //   date TEXT,
+    //   summary TEXT,
+    //   body TEXT,
+    //   recommend BOOLEAN,
+    //   reported BOOLEAN,
+    //   reviewer_name TEXT,
+    //   reviewer_email TEXT,
+    //   response TEXT,
+    //   helpfulness INT
+    // );
 //   `)  
 //   await client.query(`
 //     CREATE TABLE IF NOT EXISTS prodReview.characteristics (
