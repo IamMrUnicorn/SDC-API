@@ -2,12 +2,10 @@ const express = require("express");
 const dotenv = require('dotenv');
 const cors = require('cors');
 dotenv.config()
-const {pool, initalizeDB, seedDB} = require('./database-postgres')
+const {pool} = require('./database-postgres')
 
 const app = express()
 
-// initalizeDB()
-// seedDB()
 app.use(express.json());;
 
 app.use(cors({origin:'http://localhost:3000'}))
