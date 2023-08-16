@@ -1,17 +1,30 @@
-# The-Mode-Collection-Micro-Service
-Ratings and reviews api
-postgres database on a docker container on an aws ec2 instance
-multiple node-express servers on ec2 instances using nginx to load balance
+# The Mode Collection Micro-Service
 
-brief over view on performance 
-  <stress test screen shots for each route>
-  <stress test screen shots for each route>
-  <stress test screen shots for each route>
-  <stress test screen shots for each route>
-  
-  what optimizations i made and what difference they made
-    adding indexes brought my database response times down from 45seconds to 2 seconds
-    instead of creating a database connection inside each api route, I created 1 connection and reused it for each route
-      this increased performance tremendiously, 
-        it brought the error rate down from 100% to 0% and also brought the average reponse time down to 2600ms from 10000ms when tested at 1000 users per second for a minute
-    using nginx to add load balancing did a further big performance increase from 2600ms to 25ms 
+This micro-service is designed to manage ratings and reviews through an API. It utilizes a PostgreSQL database hosted on a Docker container, running on an AWS EC2 instance. To ensure scalability and performance, we've deployed multiple Node-Express servers on separate EC2 instances and employed Nginx for load balancing.
+
+## Performance Overview
+
+**Stress Testing Results:**
+
+inital stress test before optimizations
+- version 0: ![Stress Test Result](<./readme-images/v0>)
+
+- after optimizations
+- version 3: ![Stress Test Result](<./readme-images/v3>)
+
+## Optimizations & Their Impact
+
+1. **Database Indexing:**
+   - **Problem:** Initial database response times were around 45 seconds.
+   - **Solution:** Added relevant indexes to the database.
+   - **Result:** Reduced the database response times to 2 seconds.
+
+2. **Database Connection Management:**
+   - **Problem:** Creating a new database connection for each API request was inefficient and led to high error rates.
+   - **Solution:** Established a single database connection and reused it for each API request.
+   - **Result:** This drastically improved performance. The error rate dropped from 100% to 0%. Furthermore, when tested with 1,000 users per second over a minute, the average response time decreased from 10,000ms to 2,600ms.
+
+3. **Load Balancing with Nginx:**
+   - **Problem:** Even with optimized database connections, the response time was 2,600ms.
+   - **Solution:** Integrated Nginx for load balancing across multiple Node-Express servers.
+   - **Result:** This strategy further reduced the average response time to 25ms.
