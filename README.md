@@ -7,10 +7,10 @@ This micro-service is designed to manage ratings and reviews through an API. It 
 **Stress Testing Results:**
 
 inital stress test before optimizations
-- version 0: ![Stress Test Result](<./readme-images/v0>)
+- version 0: ![Stress Test Result](<./readme-images/v0.png>)
 
 - after optimizations
-- version 3: ![Stress Test Result](<./readme-images/v3>)
+- version 3: ![Stress Test Result](<./readme-images/v3.PNG>)
 
 ## Optimizations & Their Impact
 
